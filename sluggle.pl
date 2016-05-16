@@ -76,7 +76,8 @@ sub irc_public {
 
         if ($query =~ /^https?:\/\//) {
             my $response = title($query);
-            $irc->yield( privmsg => $channel => "$nick: " . $response );
+            my $shorten  = shorten($query);
+            $irc->yield( privmsg => $channel => "$nick: " . $shorten . ' - ' . $response );
         } else {
             my $response = search($query);
             $irc->yield( privmsg => $channel => "$nick: " . $response->{'Title'} . ' - ' . $response->{'Url'} );
@@ -101,6 +102,16 @@ sub _default {
     }
     print join ' ', @output, "\n";
     return;
+}
+
+sub shorten {
+    my $query = shift;
+
+    use WWW::Shorten 'TinyURL';
+    my $short = makeashorterlink($query);
+    # $long_url  = makealongerlink($short_url);
+
+    return $short;
 }
 
 sub title {
@@ -204,4 +215,5 @@ sub channel_list {
 
     return @channels;
 }
+
 
