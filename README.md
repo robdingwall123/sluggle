@@ -1,0 +1,2 @@
+# sluggle
+Simple IRC Searchbot
