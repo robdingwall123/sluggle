@@ -72,9 +72,16 @@ sub irc_public {
 #  }
 
     if ( my ($request) = $what =~ /^find: (.+)/ ) {
-        my $response = search($1);
-        $irc->yield( privmsg => $channel => "$nick: " . $response->{'Title'} . ' - ' . $response->{'Url'} );
-        $irc->yield( privmsg => $channel => "$nick: " . $response->{'Description'} );
+        my $query = $1;
+
+        if ($query =~ /^https?:\/\//) {
+            my $response = title($query);
+            $irc->yield( privmsg => $channel => "$nick: " . $response );
+        } else {
+            my $response = search($query);
+            $irc->yield( privmsg => $channel => "$nick: " . $response->{'Title'} . ' - ' . $response->{'Url'} );
+            $irc->yield( privmsg => $channel => "$nick: " . $response->{'Description'} );
+        }
     }
     return;
 }
@@ -94,6 +101,22 @@ sub _default {
     }
     print join ' ', @output, "\n";
     return;
+}
+
+sub title {
+    my $query = shift;
+
+    use LWP::UserAgent;
+
+    my $ua = LWP::UserAgent->new;
+
+    my $response = $ua->get($query);
+
+    if ($response->is_success) {
+        return $response->title();
+    } else {
+        return $response->status_line;
+    }
 }
 
 sub search {
@@ -176,3 +199,4 @@ sub channel_list {
 
     return @channels;
 }
+
