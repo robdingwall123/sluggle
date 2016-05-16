@@ -109,6 +109,8 @@ sub title {
     use LWP::UserAgent;
 
     my $ua = LWP::UserAgent->new;
+    $ua->timeout(10);
+    $ua->env_proxy;
 
     my $response = $ua->get($query);
 
@@ -129,6 +131,9 @@ sub search {
     use LWP::UserAgent;
 
     my $ua = LWP::UserAgent->new;
+    $ua->timeout(10);
+    $ua->env_proxy;
+
     my $req = HTTP::Request->new( GET => $searchurl );
     $req->authorization_basic('', $account_key);
     my $response = $ua->request( $req );
