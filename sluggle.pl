@@ -71,7 +71,7 @@ sub irc_public {
 #    'Title' => 'Surrey Linux User Group'
 #  }
 
-    if ( (my $request) = $what =~ /^find: (.+)/ ) {
+    if ( (my $request) = $what =~ /^sluggle: (.+)/ ) {
         if ($request =~ /^https?:\/\//) {
             my $response = title($request);
             my $shorten  = shorten($request);
@@ -125,7 +125,7 @@ sub title {
     use LWP::UserAgent;
 
     my $ua = LWP::UserAgent->new;
-    $ua->timeout(10);
+    $ua->timeout(20);
     $ua->env_proxy;
 
     my $response = $ua->get($query);
@@ -147,7 +147,7 @@ sub search {
     use LWP::UserAgent;
 
     my $ua = LWP::UserAgent->new;
-    $ua->timeout(10);
+    $ua->timeout(20);
     $ua->env_proxy;
 
     my $req = HTTP::Request->new( GET => $searchurl );
