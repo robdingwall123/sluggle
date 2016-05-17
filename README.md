@@ -27,4 +27,6 @@ At the time of writing sluggle only has two functions:
 
  4. Rename sluggle.conf.template to sluggle.conf and update the contents.
 
- 5. Run sluggle.pl
+ 5. Run sluggle.pl specifying config file:
+
+    $ ./sluggle.pl sluggle.conf

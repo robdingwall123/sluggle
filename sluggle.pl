@@ -23,7 +23,13 @@ use POE qw(Component::IRC);
 
 use vars qw( $CONF );
 use Config::Simple;
-$CONF = new Config::Simple('sluggle.conf');
+
+if ( (defined $ARGV[0]) and (-r $ARGV[0]) ) {
+    $CONF = new Config::Simple($ARGV[0]);
+} else {
+    print "USAGE: sluggle.pl sluggle.conf\n";
+    exit;
+}
 
 my @channels = channel_list();
 
