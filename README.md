@@ -1,10 +1,6 @@
 # sluggle
 Simple IRC Searchbot
 
-## Licence
-
-Copyright (c) 2016 Christopher Roberts
-
 ## Usage
 
     sluggle: Winter Olympics
