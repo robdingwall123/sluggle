@@ -105,11 +105,26 @@ sub irc_public {
         if ($request =~ /^https?:\/\//) {
             my $response = title($request);
             my $shorten  = shorten($request);
-            $irc->yield( privmsg => $channel => "$nick: " . $shorten . ' - ' . $response );
+            if ( (defined $response) and (defined $shorten) ) {
+                $irc->yield( privmsg => $channel => "$nick: " . $shorten . ' - ' . $response );
+            } elsif (defined $response) {
+                $irc->yield( privmsg => $channel => "$nick: " . $response . " (URL shortener failed)" );
+            } elsif (defined $shorten) {
+                $irc->yield( privmsg => $channel => "$nick: " . $shorten  . " (Page title not found)" );
+            } else {
+                $irc->yield( privmsg => $channel => "$nick: URL shortener failed and page title not found. Total fail :(" );
+            }
+
         } else {
             my $response = search($request);
-            $irc->yield( privmsg => $channel => "$nick: " . $response->{'Title'} . ' - ' . $response->{'Url'} );
-            $irc->yield( privmsg => $channel => "$nick: " . $response->{'Description'} );
+            if ( (defined $response->{'Title'}) and (defined $response->{'Url'}) ) {
+                $irc->yield( privmsg => $channel => "$nick: " . $response->{'Title'} . ' - ' . $response->{'Url'} );
+                if ( defined $response->{'Description'} ) {
+                    $irc->yield( privmsg => $channel => "$nick: " . $response->{'Description'} );
+                }
+            } else {
+                $irc->yield( privmsg => $channel => "$nick: Didn't get anything meaningful back from Bing, sorry!" );
+            }
         }
 
     # Shorten links and return title
@@ -117,7 +132,11 @@ sub irc_public {
         foreach my $request (@requests) {
             my $response = title($request);
             my $shorten  = shorten($request);
-            $irc->yield( privmsg => $channel => "$nick: " . $shorten . ' - ' . $response );
+            if ( (defined $response) and (defined $shorten) ) {
+                $irc->yield( privmsg => $channel => "$nick: " . $shorten . ' - ' . $response );
+            } else {
+                # Do nothing, hopefully no-one will notice
+            }
         }
     }
 
@@ -171,6 +190,9 @@ sub title {
 
 sub search {
     my $query = shift;
+
+    # Remove any non-ascii characters
+    $query =~ s/[^[:ascii:]]//g;
 
     my $account_key = $CONF->param('key');
     my $serviceurl  = $CONF->param('url');
