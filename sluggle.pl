@@ -71,25 +71,22 @@ sub irc_public {
 #    'Title' => 'Surrey Linux User Group'
 #  }
 
-    my $request;
-    if ( ($request) = $what =~ /^find: (.+)/ ) {
-        my $query = $1;
-
-        if ($query =~ /^https?:\/\//) {
-            my $response = title($query);
-            my $shorten  = shorten($query);
+    if ( (my $request) = $what =~ /^find: (.+)/ ) {
+        if ($request =~ /^https?:\/\//) {
+            my $response = title($request);
+            my $shorten  = shorten($request);
             $irc->yield( privmsg => $channel => "$nick: " . $shorten . ' - ' . $response );
         } else {
-            my $response = search($query);
+            my $response = search($request);
             $irc->yield( privmsg => $channel => "$nick: " . $response->{'Title'} . ' - ' . $response->{'Url'} );
             $irc->yield( privmsg => $channel => "$nick: " . $response->{'Description'} );
         }
-    } elsif ( ($request) = $what =~ /\b(https?:\/\/[^ ]+)\b/ ) {
-        my $query = $1;
-
-        my $response = title($query);
-        my $shorten  = shorten($query);
-        $irc->yield( privmsg => $channel => "$nick: " . $shorten . ' - ' . $response );
+    } elsif ( (my @requests) = $what =~ /\b(https?:\/\/[^ ]+)\b/g ) {
+        foreach my $request (@requests) {
+            my $response = title($request);
+            my $shorten  = shorten($request);
+            $irc->yield( privmsg => $channel => "$nick: " . $shorten . ' - ' . $response );
+        }
     }
 
     return;
