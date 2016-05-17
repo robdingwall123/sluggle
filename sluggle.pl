@@ -86,7 +86,16 @@ sub irc_public {
 #    'Title' => 'Surrey Linux User Group'
 #  }
 
-    if ( (my $request) = $what =~ /^sluggle: (.+)/ ) {
+    # Ignore find bot to prevent bot battles
+    if ($nick eq 'find') {
+        next;
+
+    # Simple link to readme if someone asks for help
+    } elsif ( $what =~ /^sluggle: help/i ) {
+        $irc->yield( privmsg => $channel => "$nick: For help please visit https://github.com/chrisjrob/sluggle/blob/master/README.md" );
+
+    # Bing search
+    } elsif ( (my $request) = $what =~ /^sluggle: (.+)/ ) {
         if ($request =~ /^https?:\/\//) {
             my $response = title($request);
             my $shorten  = shorten($request);
@@ -96,6 +105,8 @@ sub irc_public {
             $irc->yield( privmsg => $channel => "$nick: " . $response->{'Title'} . ' - ' . $response->{'Url'} );
             $irc->yield( privmsg => $channel => "$nick: " . $response->{'Description'} );
         }
+
+    # Shorten links and return title
     } elsif ( (my @requests) = $what =~ /\b(https?:\/\/[^ ]+)\b/g ) {
         foreach my $request (@requests) {
             my $response = title($request);
