@@ -195,15 +195,14 @@ sub sanitise_address {
 
     my $response = 0;
 
-    # Protect against non-standard ports
-    if ( $request =~ m/\:\d+/ ) {
-        $response = 'Non-standard ports are not permitted'
-
-    } elsif ( $request =~ m/^https?:\/\/$IPv4_re/i ) {
+    if ( $request =~ m/^https?:\/\/$IPv4_re/i ) {
         $response = 'IP addresses are not permitted'
 
     } elsif ( $request =~ m/^https?:\/\/$IPv6_re/i ) {
         $response = 'IP addresses are not permitted'
+
+    } elsif ( $request =~ m/\:\d+/ ) {
+        $response = 'Non-standard ports are not permitted'
 
     }
 
