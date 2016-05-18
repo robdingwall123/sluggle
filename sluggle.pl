@@ -65,13 +65,20 @@ sub _start {
     # retrieve our component's object from the heap where we stashed it
     my $irc = $heap->{irc};
 
-    $irc->plugin_add(
-        'BotCommand',
+    $irc->plugin_add('BotCommand',
         POE::Component::IRC::Plugin::BotCommand->new(
             Commands => {
-                find    => 'Takes one argument: a string to search for on the web',
-                lookup  => 'Takes one argument: an http web address to look-up on the web'
-            }
+                find        => 'Takes one argument: a string to search for on the web',
+                lookup      => 'Takes one argument: an http web address to look-up on the web'
+            },
+            In_channels     => 1,
+            In_private      => 1,
+            Auth_sub        => \&check_if_bot,
+            Ignore_unauthorized => 1,
+            Addressed       => 0,
+            Prefix          => $CONF->param('prefix'),
+            Eat             => 1,
+            Ignore_unknown  => 1,
         )
     );
 
@@ -112,10 +119,9 @@ sub irc_public {
 #    'Title' => 'Surrey Linux User Group'
 #  }
 
-    return if nick_is_a_bot($nick);
-
     # Ignore sluggle: commands - handled by botcommand plugin
-    if ($what =~ /^sluggle:/i) {
+    my $whoami = $CONF->param('nickname');
+    if ($what =~ /^(?:!|$whoami:)/i) {
         # Do nothing
 
     # Shorten links and return title
@@ -154,8 +160,6 @@ sub _default {
 sub irc_botcmd_find {
     my $nick = ( split /!/, $_[ARG0] )[0];
 
-    return if nick_is_a_bot($nick);
-
     my ( $channel, $request ) = @_[ ARG1, ARG2 ];
 
     my $response = search($request);
@@ -174,8 +178,6 @@ sub irc_botcmd_find {
 
 sub irc_botcmd_lookup {
     my $nick = ( split /!/, $_[ARG0] )[0];
-
-    return if nick_is_a_bot($nick);
 
     my ( $channel, $request ) = @_[ ARG1, ARG2 ];
 
@@ -302,17 +304,19 @@ sub search {
 
 }
 
-sub nick_is_a_bot {
-    my $nick = shift;
+sub check_if_bot {
+    my ($object, $nick, $where, $command, $args) = @_;
 
     my @bots = $CONF->param('bots');
     my $bots = join('|', @bots );
 
-    if ($nick =~ /^(?:$bots)$/i) {
-        return 1;
-    } else {
+    warn "Checking $nick against bots: $bots";
+
+    if ($nick =~ /^(?:$bots)\b/i) {
+        warn "Blocked";
         return 0;
     }
 
+    return 1;
 }
 
