@@ -247,8 +247,9 @@ sub shorten {
     use WWW::Shorten 'TinyURL';
 
     # Eval required as WWW::Shorten falls over if service unavailable
+    my $short;
     eval {
-        my $short = makeashorterlink($query);
+        $short = makeashorterlink($query);
     };
 
     warn "URL shortener failed $@" if $@;
