@@ -131,6 +131,12 @@ sub irc_public {
     # Shorten links and return title
     } elsif ( (my @requests) = $what =~ /\b(https?:\/\/[^ ]+)\b/g ) {
         foreach my $request (@requests) {
+
+            my $errors = sanitise_address($request);
+            if ($errors ne '0') {
+                next;
+            }
+
             my $response = title($request);
             my $shorten  = shorten($request);
             if ( (defined $response) and (defined $shorten) ) {
@@ -180,6 +186,30 @@ sub irc_botcmd_find {
 
 }
 
+sub sanitise_address {
+    my $request = shift;
+
+    use Regexp::IPv6 qw($IPv6_re);
+    use Regexp::Common qw /net/;
+    my $IPv4_re = $RE{net}{IPv4};
+
+    my $response = 0;
+
+    # Protect against non-standard ports
+    if ( $request =~ m/\:\d+/ ) {
+        $response = 'Non-standard ports are not permitted'
+
+    } elsif ( $request =~ m/^https?:\/\/$IPv4_re/i ) {
+        $response = 'IP addresses are not permitted'
+
+    } elsif ( $request =~ m/^https?:\/\/$IPv6_re/i ) {
+        $response = 'IP addresses are not permitted'
+
+    }
+
+    return $response;
+}
+
 sub irc_botcmd_lookup {
     my $nick = ( split /!/, $_[ARG0] )[0];
 
@@ -190,12 +220,9 @@ sub irc_botcmd_lookup {
         return;
     }
 
-    # Protect against non-standard ports
-    if ( $request =~ m/\:\d+/ ) {
-        $irc->yield( privmsg => $channel => "$nick: Sorry but non-standard ports are not permitted!" );
-        return;
-    } elsif ( $request =~ m/https?:\/\/127\.0/i ) {
-        $irc->yield( privmsg => $channel => "$nick: Sorry but local addresses are not permitted!" );
+    my $errors = sanitise_address($request);
+    if ($errors ne '0') {
+        $irc->yield( privmsg => $channel => "$nick: $errors");
         return;
     }
 
