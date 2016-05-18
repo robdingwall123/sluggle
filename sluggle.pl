@@ -245,8 +245,13 @@ sub shorten {
     my $query = shift;
 
     use WWW::Shorten 'TinyURL';
-    my $short = makeashorterlink($query);
-    # $long_url  = makealongerlink($short_url);
+
+    # Eval required as WWW::Shorten falls over if service unavailable
+    eval {
+        my $short = makeashorterlink($query);
+    };
+
+    warn "URL shortener failed $@" if $@;
 
     return $short;
 }
