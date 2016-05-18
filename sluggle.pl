@@ -19,7 +19,10 @@
 
 use strict;
 use warnings;
-use POE qw(Component::IRC);
+
+use POE;
+use POE::Component::IRC;
+use POE::Component::IRC::Plugin::BotCommand;
 
 use vars qw( $CONF );
 use Config::Simple;
@@ -42,7 +45,15 @@ my $irc = POE::Component::IRC->spawn(
 
 POE::Session->create(
     package_states => [
-        main => [ qw(_default _start irc_001 irc_public) ],
+        main => [ qw(
+            _default 
+            _start 
+            irc_001 
+            irc_botcmd_slap 
+            irc_botcmd_find 
+            irc_botcmd_lookup
+            irc_public
+        ) ],
     ],
     heap => { irc => $irc },
 );
@@ -54,6 +65,17 @@ sub _start {
 
     # retrieve our component's object from the heap where we stashed it
     my $irc = $heap->{irc};
+
+    $irc->plugin_add(
+        'BotCommand',
+        POE::Component::IRC::Plugin::BotCommand->new(
+            Commands => {
+                slap    => 'Takes one argument: a nickname to slap',
+                find    => 'Takes one argument: a string to search for on the web',
+                lookup  => 'Takes one argument: a web address to look-up on the web'
+            }
+        )
+    );
 
     $irc->yield( register => 'all' );
     $irc->yield( connect => { } );
@@ -99,41 +121,10 @@ sub irc_public {
     if ($nick =~ /^(?:$ignorenicks)$/i) {
         next;
 
-    # Simple link to readme if someone asks for help
-    } elsif ( $what =~ /^sluggle:\s*help/i ) {
-        $irc->yield( privmsg => $channel => "$nick: For help please visit https://github.com/chrisjrob/sluggle/blob/master/README.md" );
-
     # Protect against author abuse
     } elsif ( $what =~ /^sluggle:.*\bchrisjrob\b/i ) {
         warn "Action triggered";
         $irc->yield( ctcp => $channel => "ACTION slaps $nick" );
-
-    # Bing search
-    } elsif ( (my $request) = $what =~ /^sluggle: (.+)/ ) {
-        if ($request =~ /^https?:\/\//) {
-            my $response = title($request);
-            my $shorten  = shorten($request);
-            if ( (defined $response) and (defined $shorten) ) {
-                $irc->yield( privmsg => $channel => "$nick: " . $shorten . ' - ' . $response );
-            } elsif (defined $response) {
-                $irc->yield( privmsg => $channel => "$nick: " . $response . " (URL shortener failed)" );
-            } elsif (defined $shorten) {
-                $irc->yield( privmsg => $channel => "$nick: " . $shorten  . " (Page title not found)" );
-            } else {
-                $irc->yield( privmsg => $channel => "$nick: URL shortener failed and page title not found. Total fail :(" );
-            }
-
-        } else {
-            my $response = search($request);
-            if ( (defined $response->{'Title'}) and (defined $response->{'Url'}) ) {
-                $irc->yield( privmsg => $channel => "$nick: " . $response->{'Title'} . ' - ' . $response->{'Url'} );
-                if ( defined $response->{'Description'} ) {
-                    $irc->yield( privmsg => $channel => "$nick: " . $response->{'Description'} );
-                }
-            } else {
-                $irc->yield( privmsg => $channel => "$nick: Didn't get anything meaningful back from Bing, sorry!" );
-            }
-        }
 
     # Shorten links and return title
     } elsif ( (my @requests) = $what =~ /\b(https?:\/\/[^ ]+)\b/g ) {
@@ -166,6 +157,61 @@ sub _default {
     }
     print join ' ', @output, "\n";
     return;
+}
+
+# the good old slap
+sub irc_botcmd_slap {
+    my $nick = ( split /!/, $_[ARG0] )[0];
+
+    return if nick_is_a_bot($nick);
+
+    my ( $where, $arg ) = @_[ ARG1, ARG2 ];
+    $irc->yield( ctcp => $where, "ACTION slaps $arg" );
+    return;
+}
+
+sub irc_botcmd_find {
+    my $nick = ( split /!/, $_[ARG0] )[0];
+
+    return if nick_is_a_bot($nick);
+
+    my ( $channel, $request ) = @_[ ARG1, ARG2 ];
+
+    my $response = search($request);
+    if ( (defined $response->{'Title'}) and (defined $response->{'Url'}) ) {
+        $irc->yield( privmsg => $channel => "$nick: " . $response->{'Title'} . ' - ' . $response->{'Url'} );
+        if ( defined $response->{'Description'} ) {
+            $irc->yield( privmsg => $channel => "$nick: " . $response->{'Description'} );
+        }
+    } else {
+        $irc->yield( privmsg => $channel => "$nick: Didn't get anything meaningful back from Bing, sorry!" );
+    }
+
+    return;
+
+}
+
+sub irc_botcmd_lookup {
+    my $nick = ( split /!/, $_[ARG0] )[0];
+
+    return if nick_is_a_bot($nick);
+
+    my ( $channel, $request ) = @_[ ARG1, ARG2 ];
+
+    my $response = title($request);
+    my $shorten  = shorten($request);
+    if ( (defined $response) and (defined $shorten) ) {
+        $irc->yield( privmsg => $channel => "$nick: " . $shorten . ' - ' . $response );
+    } elsif (defined $response) {
+        $irc->yield( privmsg => $channel => "$nick: " . $response . " (URL shortener failed)" );
+    } elsif (defined $shorten) {
+        $irc->yield( privmsg => $channel => "$nick: " . $shorten  . " (Page title not found)" );
+    } else {
+        $irc->yield( privmsg => $channel => "$nick: URL shortener failed and page title not found. Total fail :(" );
+    }
+
+    return;
+
 }
 
 sub shorten {
@@ -267,6 +313,20 @@ sub search {
 #        };
 
     return( $ref->{'d'}{'results'}[0] );
+
+}
+
+sub nick_is_a_bot {
+    my $nick = shift;
+
+    my @bots = $CONF->param('bots');
+    my $bots = join('|', @bots );
+
+    if ($nick =~ /^(?:$bots)$/i) {
+        return 1;
+    } else {
+        return 0;
+    }
 
 }
 

@@ -6,7 +6,7 @@ nickname    "sluggle"
 ircname     "Sluggle the Sailor Bot"
 server      "irc.freenode.net"
 channels    "#Foo", "#Bar"
-ignorenicks "ircbot1", "ircbot2"
+bots        "ircbot1", "ircbot2"
 
 # Bing
 key         "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
