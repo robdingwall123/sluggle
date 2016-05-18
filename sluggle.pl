@@ -175,9 +175,9 @@ sub irc_botcmd_find {
     my $response = search($request);
     if ( (defined $response->{'Title'}) and (defined $response->{'Url'}) ) {
         $irc->yield( privmsg => $channel => "$nick: " . $response->{'Title'} . ' - ' . $response->{'Url'} );
-        if ( defined $response->{'Description'} ) {
-            $irc->yield( privmsg => $channel => "$nick: " . $response->{'Description'} );
-        }
+        # if ( defined $response->{'Description'} ) {
+        #     $irc->yield( privmsg => $channel => "$nick: " . $response->{'Description'} );
+        # }
     } else {
         $irc->yield( privmsg => $channel => "$nick: Didn't get anything meaningful back from Bing, sorry!" );
     }
