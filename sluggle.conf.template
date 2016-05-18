@@ -11,3 +11,5 @@ channels    "#Foo", "#Bar
 key         "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 url         "https://api.datamarket.azure.com/Bing/SearchWeb/v1/Web?$top=1&$format=JSON&Query="
 
+# Other
+ignorenicks "ircbot1", "ircbot2"

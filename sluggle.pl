@@ -31,7 +31,7 @@ if ( (defined $ARGV[0]) and (-r $ARGV[0]) ) {
     exit;
 }
 
-my @channels = channel_list();
+my @channels = $CONF->param('channels');
 
 # We create a new PoCo-IRC object
 my $irc = POE::Component::IRC->spawn(
@@ -93,12 +93,20 @@ sub irc_public {
 #  }
 
     # Ignore find bot to prevent bot battles
-    if ($nick eq 'find') {
+    my @ignorenicks = $CONF->param('ignorenicks');
+    my $ignorenicks = join('|', @ignorenicks );
+    warn "Adding nicks to ignore: $ignorenicks";
+    if ($nick =~ /^(?:$ignorenicks)$/i) {
         next;
 
     # Simple link to readme if someone asks for help
-    } elsif ( $what =~ /^sluggle: help/i ) {
+    } elsif ( $what =~ /^sluggle:\s*help/i ) {
         $irc->yield( privmsg => $channel => "$nick: For help please visit https://github.com/chrisjrob/sluggle/blob/master/README.md" );
+
+    # Protect against author abuse
+    } elsif ( $what =~ /^sluggle:.*\bchrisjrob\b/i ) {
+        warn "Action triggered";
+        $irc->yield( ctcp => $channel => "ACTION slaps $nick" );
 
     # Bing search
     } elsif ( (my $request) = $what =~ /^sluggle: (.+)/ ) {
@@ -261,18 +269,4 @@ sub search {
     return( $ref->{'d'}{'results'}[0] );
 
 }
-
-sub channel_list {
-    my @channels;
-
-    my $ref_type = ref $CONF->param('channels');
-    if ($ref_type eq 'ARRAY') {
-        @channels = @{ $CONF->param('channels') };
-    } else {
-        push(@channels, $CONF->param('channels') );
-    }
-
-    return @channels;
-}
-
 
