@@ -350,8 +350,6 @@ sub check_if_bot {
     my @bots = $CONF->param('bots');
     my $bots = join('|', @bots );
 
-    warn "Checking $nick against bots: $bots";
-
     if ($nick =~ /^(?:$bots)\b/i) {
         warn "Blocked";
         return 0;
