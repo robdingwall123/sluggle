@@ -107,6 +107,10 @@ sub irc_public {
     my $nick = ( split /!/, $who )[0];
     my $channel = $where->[0];
 
+    unless (check_if_bot('', $nick) ) {
+        return;
+    }
+
 #  { 
 #    'ID' => 'f7572a24-b282-4f14-9326-9a29dcc7250d',
 #    '__metadata' => { 
@@ -183,6 +187,15 @@ sub irc_botcmd_lookup {
 
     if ($request !~ /^https?:\/\//i) {
         $irc->yield( privmsg => $channel => "$nick: Web addresses need to start with http(s)://" );
+        return;
+    }
+
+    # Protect against non-standard ports
+    if ( $request =~ m/\:\d+/ ) {
+        $irc->yield( privmsg => $channel => "$nick: Sorry but non-standard ports are not permitted!" );
+        return;
+    } elsif ( $request =~ m/https?:\/\/127\.0/i ) {
+        $irc->yield( privmsg => $channel => "$nick: Sorry but local addresses are not permitted!" );
         return;
     }
 
