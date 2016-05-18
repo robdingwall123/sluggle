@@ -72,10 +72,10 @@ sub _start {
                 lookup      => 'Takes one argument: an http web address to look-up on the web'
             },
             In_channels     => 1,
-            In_private      => 1,
+            In_private      => $CONF->param('private'),
             Auth_sub        => \&check_if_bot,
             Ignore_unauthorized => 1,
-            Addressed       => 0,
+            Addressed       => $CONF->param('addressed'),
             Prefix          => $CONF->param('prefix'),
             Eat             => 1,
             Ignore_unknown  => 1,

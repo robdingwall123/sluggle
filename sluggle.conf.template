@@ -1,5 +1,4 @@
 # Configuration Template
-# Rename sluggle.conf to enable
 
 # IRC
 nickname    "sluggle"
@@ -7,8 +6,10 @@ ircname     "Sluggle the Sailor Bot"
 server      "irc.freenode.net"
 channels    "#Foo", "#Bar"
 bots        "ircbot1", "ircbot2"
-prefix      !
+addressed   0
+private     0
+prefix      '!'
 
 # Bing
-key         "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 url         "https://api.datamarket.azure.com/Bing/SearchWeb/v1/Web?$top=1&$format=JSON&Query="
+key         "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"

@@ -3,7 +3,15 @@ Simple IRC Searchbot
 
 ## Usage
 
-    sluggle: Winter Olympics
+There are two modes - address mode:
+
+    sluggle: find Winter Olympics
+    sluggle: lookup http://www.example.com
+
+And command mode:
+
+    !find Winter Olympics
+    !lookup http://www.example.com
 
 ## Purpose
 
