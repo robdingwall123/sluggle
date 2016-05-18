@@ -49,7 +49,6 @@ POE::Session->create(
             _default 
             _start 
             irc_001 
-            irc_botcmd_slap 
             irc_botcmd_find 
             irc_botcmd_lookup
             irc_public
@@ -70,9 +69,8 @@ sub _start {
         'BotCommand',
         POE::Component::IRC::Plugin::BotCommand->new(
             Commands => {
-                slap    => 'Takes one argument: a nickname to slap',
                 find    => 'Takes one argument: a string to search for on the web',
-                lookup  => 'Takes one argument: a web address to look-up on the web'
+                lookup  => 'Takes one argument: an http web address to look-up on the web'
             }
         )
     );
@@ -114,17 +112,11 @@ sub irc_public {
 #    'Title' => 'Surrey Linux User Group'
 #  }
 
-    # Ignore find bot to prevent bot battles
-    my @ignorenicks = $CONF->param('ignorenicks');
-    my $ignorenicks = join('|', @ignorenicks );
-    warn "Adding nicks to ignore: $ignorenicks";
-    if ($nick =~ /^(?:$ignorenicks)$/i) {
-        next;
+    return if nick_is_a_bot($nick);
 
-    # Protect against author abuse
-    } elsif ( $what =~ /^sluggle:.*\bchrisjrob\b/i ) {
-        warn "Action triggered";
-        $irc->yield( ctcp => $channel => "ACTION slaps $nick" );
+    # Ignore sluggle: commands - handled by botcommand plugin
+    if ($what =~ /^sluggle:/i) {
+        # Do nothing
 
     # Shorten links and return title
     } elsif ( (my @requests) = $what =~ /\b(https?:\/\/[^ ]+)\b/g ) {
@@ -159,17 +151,6 @@ sub _default {
     return;
 }
 
-# the good old slap
-sub irc_botcmd_slap {
-    my $nick = ( split /!/, $_[ARG0] )[0];
-
-    return if nick_is_a_bot($nick);
-
-    my ( $where, $arg ) = @_[ ARG1, ARG2 ];
-    $irc->yield( ctcp => $where, "ACTION slaps $arg" );
-    return;
-}
-
 sub irc_botcmd_find {
     my $nick = ( split /!/, $_[ARG0] )[0];
 
@@ -197,6 +178,11 @@ sub irc_botcmd_lookup {
     return if nick_is_a_bot($nick);
 
     my ( $channel, $request ) = @_[ ARG1, ARG2 ];
+
+    if ($request !~ /^https?:\/\//i) {
+        $irc->yield( privmsg => $channel => "$nick: Web addresses need to start with http(s)://" );
+        return;
+    }
 
     my $response = title($request);
     my $shorten  = shorten($request);
