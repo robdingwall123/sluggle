@@ -251,14 +251,38 @@ sub irc_botcmd_lookup {
 
     my $response = title($request);
     my $shorten  = shorten($request);
-    if ( (defined $response) and (defined $shorten) ) {
-        $irc->yield( privmsg => $channel => "$nick: " . $shorten . ' - ' . $response );
-    } elsif (defined $response) {
-        $irc->yield( privmsg => $channel => "$nick: " . $response . " (URL shortener failed)" );
-    } elsif (defined $shorten) {
-        $irc->yield( privmsg => $channel => "$nick: " . $shorten  . " (Page title not found)" );
+    my $wot      = wot($request);
+
+    my @elements;
+    if (defined $shorten) {
+        push(@elements, $shorten);
     } else {
-        $irc->yield( privmsg => $channel => "$nick: URL shortener failed and page title not found. Total fail :(" );
+        push(@elements, 'URL shortener failed');
+    }
+
+    if (defined $response) {
+        push(@elements, $response);
+    } else {
+        push(@elements, 'Title lookup failed');
+    }
+
+    if (defined $wot) {
+        push(@elements, 'Reputation is ' 
+            . $wot->{trustworthiness_description}
+            . ' ('
+            . $wot->{trustworthiness_score}
+            . ')'
+        );
+    } else {
+        push(@elements, 'WOT lookup failed');
+    }
+
+    my $count = @elements;
+    if ($count != 0) {
+        my $message = join(' - ', @elements);
+        $irc->yield( privmsg => $channel => "$nick: " . $message . '.');
+    } else {
+        # Do nothing, hopefully no-one will notice
     }
 
     return;
