@@ -156,7 +156,7 @@ sub irc_public {
             }
 
             if ((defined $wot) and ($wot->{trustworthiness_score} =~ /^\d+$/)) {
-                push(@elements, 'Reputation is ' 
+                push(@elements, 'WOT Reputation is ' 
                     . $wot->{trustworthiness_description}
                     . ' ('
                     . $wot->{trustworthiness_score}
@@ -274,7 +274,7 @@ sub irc_botcmd_find {
     }
 
     if ((defined $wot) and ($wot->{trustworthiness_score} =~ /^\d+$/)) {
-        push(@elements, 'Reputation is ' 
+        push(@elements, 'WOT Reputation is ' 
             . $wot->{trustworthiness_description}
             . ' ('
             . $wot->{trustworthiness_score}
