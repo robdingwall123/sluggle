@@ -69,7 +69,7 @@ sub _start {
         POE::Component::IRC::Plugin::BotCommand->new(
             Commands => {
                 find        => 'A simple Internet search, takes one argument - a string to search.',
-                wot         => 'Looks up WOT Web of Trust reputation, takes one argument - an http web address.'
+                wot         => 'Looks up WoT Web of Trust reputation, takes one argument - an http web address.'
             },
             In_channels     => 1,
             In_private      => $CONF->param('private'),
@@ -156,7 +156,7 @@ sub irc_public {
             }
 
             if ((defined $wot) and ($wot->{trustworthiness_score} =~ /^\d+$/)) {
-                push(@elements, 'WOT Reputation is ' 
+                push(@elements, 'WoT is ' 
                     . $wot->{trustworthiness_description}
                     . ' ('
                     . $wot->{trustworthiness_score}
@@ -274,14 +274,14 @@ sub irc_botcmd_find {
     }
 
     if ((defined $wot) and ($wot->{trustworthiness_score} =~ /^\d+$/)) {
-        push(@elements, 'WOT Reputation is ' 
+        push(@elements, 'WoT is ' 
             . $wot->{trustworthiness_description}
             . ' ('
             . $wot->{trustworthiness_score}
             . ')'
         );
     } else {
-        # push(@elements, 'WOT lookup failed');
+        # push(@elements, 'WoT lookup failed');
     }
 
     my $count = @elements;
@@ -320,7 +320,7 @@ sub irc_botcmd_wot {
            . ').'
         );
     } else {
-        $irc->yield( privmsg => $channel => "$nick: WOT did not return any site reputation.");
+        $irc->yield( privmsg => $channel => "$nick: WoT did not return any site reputation.");
     }
 
     return;
@@ -385,16 +385,14 @@ sub title {
     my $ua = LWP::UserAgent->new;
     $ua->timeout(20);
     $ua->protocols_allowed( [ 'http', 'https'] );
-    $ua->max_size(2048);
+    $ua->max_size(1024 * 1024 * 8);
     $ua->env_proxy;
 
     my $response = $ua->get($query);
 
     if ($response->is_success) {
-        warn "Success: $response->title";
         return $response->title();
     } else {
-        warn "Fail: $response->status_line";
         return $response->status_line;
     }
 }
