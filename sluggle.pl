@@ -22,6 +22,7 @@ use warnings;
 
 use POE;
 use POE::Component::IRC;
+use POE::Component::IRC::State;
 use POE::Component::IRC::Plugin::BotCommand;
 
 use vars qw( $CONF );
@@ -37,7 +38,7 @@ if ( (defined $ARGV[0]) and (-r $ARGV[0]) ) {
 my @channels = $CONF->param('channels');
 
 # We create a new PoCo-IRC object
-my $irc = POE::Component::IRC->spawn(
+my $irc = POE::Component::IRC::State->spawn(
    nick     => $CONF->param('nickname'),
    ircname  => $CONF->param('ircname'),
    server   => $CONF->param('server'),
@@ -52,6 +53,7 @@ POE::Session->create(
             irc_invite
             irc_botcmd_find 
             irc_botcmd_wot
+            irc_botcmd_op
             irc_public
         ) ],
     ],
@@ -70,7 +72,8 @@ sub _start {
         POE::Component::IRC::Plugin::BotCommand->new(
             Commands => {
                 find        => 'A simple Internet search, takes one argument - a string to search.',
-                wot         => 'Looks up WoT Web of Trust reputation, takes one argument - an http web address.'
+                wot         => 'Looks up WoT Web of Trust reputation, takes one argument - an http web address.',
+                op          => 'Currently has no other purpose than to tell you if you are an op or not!',
             },
             In_channels     => 1,
             In_private      => $CONF->param('private'),
@@ -195,6 +198,21 @@ sub sanitise_address {
     }
 
     return $response;
+}
+
+sub irc_botcmd_op {
+    my $nick = ( split /!/, $_[ARG0] )[0];
+
+    my ($channel, $request) = @_[ ARG1, ARG2 ];
+
+    if ( check_if_op($channel, $nick) ) {
+        $irc->yield( privmsg => $channel => "$nick: You are indeed a might op!");
+    } else {
+        $irc->yield( privmsg => $channel => "$nick: Only channel operators may do that!");
+    } 
+
+    return;
+
 }
 
 sub irc_botcmd_find {
@@ -465,3 +483,14 @@ sub check_if_bot {
     return 1;
 }
 
+sub check_if_op {
+  my ($chan, $nick) = @_;
+  return 0 unless $nick;
+  if (($irc->is_channel_operator($chan, $nick)) or 
+      ($irc->nick_channel_modes($chan, $nick) =~ m/[aoq]/)) {
+    return 1;
+  }
+  else {
+    return 0;
+  }
+}
