@@ -3,22 +3,33 @@ Simple IRC Searchbot
 
 ## Usage
 
+    !find Winter Olympics
+    !find http://google.com
+    !wot http://google.com
+
+## Address vs Command Modes
+
 There are two modes - address mode:
 
     sluggle: find Winter Olympics
-    sluggle: lookup http://www.example.com
 
 And command mode:
 
     !find Winter Olympics
-    !lookup http://www.example.com
 
-## Purpose
+## Find
 
-At the time of writing sluggle only has two functions:
+The !find command can take either text or a URL:
 
- 1. To respond to sluggle: search requests
- 2. To watch for web addresses and return a tinyurl and description
+    !find Winter Olympics
+    !find http://google.com
+
+## WOT (Web of Trust)
+
+The !wot command requires a URL:
+
+    !wot http://google.com
+
 
 ## Installation
 
@@ -28,6 +39,15 @@ At the time of writing sluggle only has two functions:
   * Config::Simple
   * LWP::UserAgent
   * JSON
+  * Net::WOT
+  * POE::Component::IRC::Plugin::BotCommand
+  * POE::Component::IRC
+  * POE
+  * Regexp::Common
+  * Regexp::IPv6
+  * URI::URL
+  * URI
+  * WWW::Shorten::TinyURL
 
  2. Clone or save the repository.
 
