@@ -51,6 +51,7 @@ POE::Session->create(
             _start 
             irc_001 
             irc_invite
+            irc_kick
             irc_botcmd_find 
             irc_botcmd_wot
             irc_botcmd_op
@@ -106,8 +107,41 @@ sub irc_001 {
     return;
 }
 
+sub irc_kick {
+    my ($kicker, $where, $kicked) = @_[ARG0 .. ARG2];
+
+    # Remove the channel to the list
+    my @channels = $CONF->param('channels');
+
+    my @newchannels;
+    foreach my $channel (@channels) {
+        if ($channel eq $where) {
+            next;
+        } else {
+            push(@newchannels, $channel);
+        }
+    }
+
+    my $count = @newchannels;
+    if ($count == 0) {
+        $CONF->delete('channels');
+    } else {
+        $CONF->param('channels', \@newchannels);
+    }
+
+    $CONF->save();
+
+    return;
+}
+
 sub irc_invite {
     my ($who, $where) = @_[ARG0 .. ARG1];
+
+    # Add the channel to the list
+    my @channels = $CONF->param('channels');
+    push(@channels, $where);
+    $CONF->param('channels', \@channels);
+    $CONF->save();
 
     # we join our channels
     $irc->yield( join => $where );
