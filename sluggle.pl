@@ -51,6 +51,7 @@ POE::Session->create(
             irc_001 
             irc_botcmd_find 
             irc_botcmd_lookup
+            irc_botcmd_wot
             irc_public
         ) ],
     ],
@@ -68,8 +69,9 @@ sub _start {
     $irc->plugin_add('BotCommand',
         POE::Component::IRC::Plugin::BotCommand->new(
             Commands => {
-                find        => 'Takes one argument: a string to search for on the web',
-                lookup      => 'Takes one argument: an http web address to look-up on the web'
+                find        => 'A simple Internet search, takes one argument - a string to search.',
+                lookup      => 'Look up a website title, takes one argument - an http web address.',
+                wot         => 'Looks up WOT Web of Trust reputation, takes one argument - an http web address.'
             },
             In_channels     => 1,
             In_private      => $CONF->param('private'),
@@ -139,8 +141,30 @@ sub irc_public {
 
             my $response = title($request);
             my $shorten  = shorten($request);
-            if ( (defined $response) and (defined $shorten) ) {
-                $irc->yield( privmsg => $channel => "$nick: " . $shorten . ' - ' . $response );
+            my $wot      = wot($request);
+
+            my @elements;
+            if (defined $shorten) {
+                push(@elements, $shorten);
+            }
+
+            if (defined $response) {
+                push(@elements, $response);
+            }
+
+            if (defined $wot) {
+                push(@elements, 'Reputation is ' 
+                    . $wot->{trustworthiness_description}
+                    . ' ('
+                    . $wot->{trustworthiness_score}
+                    . ')'
+                );
+            }
+
+            my $count = @elements;
+            if ($count != 0) {
+                my $message = join(' - ', @elements);
+                $irc->yield( privmsg => $channel => "$nick: " . $message . '.');
             } else {
                 # Do nothing, hopefully no-one will notice
             }
@@ -239,6 +263,68 @@ sub irc_botcmd_lookup {
 
     return;
 
+}
+
+sub irc_botcmd_wot {
+    my $nick = ( split /!/, $_[ARG0] )[0];
+
+    my ( $channel, $request ) = @_[ ARG1, ARG2 ];
+
+    if ($request !~ /^https?:\/\//i) {
+        $irc->yield( privmsg => $channel => "$nick: Web addresses need to start with http(s)://" );
+        return;
+    }
+
+    my $errors = sanitise_address($request);
+    if ($errors ne '0') {
+        $irc->yield( privmsg => $channel => "$nick: $errors");
+        return;
+    }
+
+    my $wot = wot($request);
+    if ((defined $wot) and ($wot->{trustworthiness_score} =~ /\d/) ) {
+        $irc->yield( privmsg => $channel => "$nick: Site reputation is "
+           . $wot->{trustworthiness_description}
+           . ' (' 
+           . $wot->{trustworthiness_score} 
+           . ').'
+        );
+    } else {
+        $irc->yield( privmsg => $channel => "$nick: WOT did not return any site reputation.");
+    }
+
+    return;
+
+}
+
+sub wot {
+    my $query = shift;
+
+    use URI;
+    my $uri = URI->new($query);
+
+    use Net::WOT;
+    my $wot = Net::WOT->new;
+
+    my %wot = $wot->get_reputation($uri->host);
+
+    # the %wot hash seems oddly structured
+    my $mywot = {
+        'trustworthiness_description'       => $wot->trustworthiness_description,
+        'trustworthiness_score'             => $wot->trustworthiness_score,
+        'trustworthiness_confidence'        => $wot->trustworthiness_confidence,
+        'vendor_reliability_description'    => $wot->vendor_reliability_description,
+        'vendor_reliability_score'          => $wot->vendor_reliability_score,
+        'vendor_reliability_confidence'     => $wot->vendor_reliability_confidence,
+        'privacy_description'               => $wot->privacy_description,
+        'privacy_score'                     => $wot->privacy_score,
+        'privacy_confidence'                => $wot->privacy_confidence,
+        'child_safety_description'          => $wot->child_safety_description,
+        'child_safety_score'                => $wot->child_safety_score,
+        'child_safety_confidence'           => $wot->child_safety_confidence
+    };
+
+    return $mywot;
 }
 
 sub shorten {
