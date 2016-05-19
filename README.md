@@ -9,11 +9,16 @@ Simple IRC Searchbot
 
 ## Address vs Command Modes
 
-There are two modes - address mode:
+There are two modes - address mode and command mode, and this is set in the conf file:
+
+    addressed 0 (for !find)
+    addressed 1 (for sluggle: find)
+
+Addressed mode:
 
     sluggle: find Winter Olympics
 
-And command mode:
+Command mode:
 
     !find Winter Olympics
 

@@ -49,6 +49,7 @@ POE::Session->create(
             _default 
             _start 
             irc_001 
+            irc_invite
             irc_botcmd_find 
             irc_botcmd_wot
             irc_public
@@ -102,6 +103,14 @@ sub irc_001 {
     return;
 }
 
+sub irc_invite {
+    my ($who, $where) = @_[ARG0 .. ARG1];
+
+    # we join our channels
+    $irc->yield( join => $where );
+    return;
+}
+
 sub irc_public {
     my ($sender, $who, $where, $what) = @_[SENDER, ARG0 .. ARG2];
     my $nick = ( split /!/, $who )[0];
@@ -131,46 +140,8 @@ sub irc_public {
     # Shorten links and return title
     } elsif ( (my @requests) = $what =~ /\b(https?:\/\/[^ ]+)\b/g ) {
         foreach my $request (@requests) {
-
-            my $errors = sanitise_address($request);
-            if ($errors ne '0') {
-                next;
-            }
-
-            my $response = title($request);
-            my $shorten  = shorten($request);
-            my $wot      = wot($request);
-
-            # Stop using shortened address if it's actually longer!
-            if ( length($shorten) >= length($request) ) {
-                $shorten = $request;
-            }
-
-            my @elements;
-            if (defined $shorten) {
-                push(@elements, $shorten);
-            }
-
-            if (defined $response) {
-                push(@elements, $response);
-            }
-
-            if ((defined $wot) and ($wot->{trustworthiness_score} =~ /^\d+$/)) {
-                push(@elements, 'WoT is ' 
-                    . $wot->{trustworthiness_description}
-                    . ' ('
-                    . $wot->{trustworthiness_score}
-                    . ')'
-                );
-            }
-
-            my $count = @elements;
-            if ($count != 0) {
-                my $message = join(' - ', @elements);
-                $irc->yield( privmsg => $channel => "$nick: " . $message . '.');
-            } else {
-                # Do nothing, hopefully no-one will notice
-            }
+            my $response = find($request);
+            $irc->yield( privmsg => $channel => "$nick: " . $response);
         }
     }
 
@@ -231,10 +202,20 @@ sub irc_botcmd_find {
 
     my ($channel, $request) = @_[ ARG1, ARG2 ];
 
+    my $response = find($request);
+
+    $irc->yield( privmsg => $channel => "$nick: " . $response);
+
+    return;
+
+}
+
+sub find {
+    my $request = shift;
+
     my $errors = sanitise_address($request);
     if ($errors ne '0') {
-        $irc->yield( privmsg => $channel => "$nick: $errors");
-        return;
+        return $errors;
     }
 
     my ($url, $title, $shorten);
@@ -254,8 +235,7 @@ sub irc_botcmd_find {
     }
 
     if (! defined $url) {
-        $irc->yield( privmsg => $channel => "$nick: There were no search results!");
-        return;
+        return "There were no search results!";
     }
 
     my $wot     = wot($url);
@@ -287,7 +267,7 @@ sub irc_botcmd_find {
     my $count = @elements;
     if ($count != 0) {
         my $message = join(' - ', @elements);
-        $irc->yield( privmsg => $channel => "$nick: " . $message . '.');
+        return $message . '.';
     } else {
         # Do nothing, hopefully no-one will notice
     }
