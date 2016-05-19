@@ -50,7 +50,6 @@ POE::Session->create(
             _start 
             irc_001 
             irc_botcmd_find 
-            irc_botcmd_lookup
             irc_botcmd_wot
             irc_public
         ) ],
@@ -70,7 +69,6 @@ sub _start {
         POE::Component::IRC::Plugin::BotCommand->new(
             Commands => {
                 find        => 'A simple Internet search, takes one argument - a string to search.',
-                lookup      => 'Look up a website title, takes one argument - an http web address.',
                 wot         => 'Looks up WOT Web of Trust reputation, takes one argument - an http web address.'
             },
             In_channels     => 1,
@@ -196,25 +194,6 @@ sub _default {
     return;
 }
 
-sub irc_botcmd_find {
-    my $nick = ( split /!/, $_[ARG0] )[0];
-
-    my ( $channel, $request ) = @_[ ARG1, ARG2 ];
-
-    my $response = search($request);
-    if ( (defined $response->{'Title'}) and (defined $response->{'Url'}) ) {
-        $irc->yield( privmsg => $channel => "$nick: " . $response->{'Title'} . ' - ' . $response->{'Url'} );
-        # if ( defined $response->{'Description'} ) {
-        #     $irc->yield( privmsg => $channel => "$nick: " . $response->{'Description'} );
-        # }
-    } else {
-        $irc->yield( privmsg => $channel => "$nick: Didn't get anything meaningful back from Bing, sorry!" );
-    }
-
-    return;
-
-}
-
 sub sanitise_address {
     my $request = shift;
 
@@ -222,31 +201,35 @@ sub sanitise_address {
     use Regexp::Common qw /net/;
     my $IPv4_re = $RE{net}{IPv4};
 
+    use URI::URL;
+    my $url = new URI::URL $request;
+    my $port;
+    eval { $port = $url->port; };
+    warn "Port not found $@" if $@;
+
     my $response = 0;
 
-    if ( $request =~ m/^https?:\/\/$IPv4_re/i ) {
-        $response = 'IP addresses are not permitted'
+    if ( (defined $port) and ($port ne '80' ) and ($port ne '443') ) {
+        $response = 'Non-standard HTTP ports are not permitted';
 
-    } elsif ( $request =~ m/^https?:\/\/$IPv6_re/i ) {
-        $response = 'IP addresses are not permitted'
+    } elsif ( $request =~ m/^(?:https?:\/\/)?$IPv4_re/i ) {
+        $response = 'IP addresses are not permitted';
 
-    } elsif ( $request =~ m/\:\d+/ ) {
-        $response = 'Non-standard ports are not permitted'
+    } elsif ( $request =~ m/^(?:https?:\/\/)?$IPv6_re/i ) {
+        $response = 'IP addresses are not permitted';
+
+    } elsif ( $request =~ m/^(?:https?:\/\/)?[\/\.]+/i ) {
+        $response = 'URLs starting with a file path are not permitted';
 
     }
 
     return $response;
 }
 
-sub irc_botcmd_lookup {
+sub irc_botcmd_find {
     my $nick = ( split /!/, $_[ARG0] )[0];
 
-    my ( $channel, $request ) = @_[ ARG1, ARG2 ];
-
-    if ($request !~ /^https?:\/\//i) {
-        $irc->yield( privmsg => $channel => "$nick: Web addresses need to start with http(s)://" );
-        return;
-    }
+    my ($channel, $request) = @_[ ARG1, ARG2 ];
 
     my $errors = sanitise_address($request);
     if ($errors ne '0') {
@@ -254,14 +237,23 @@ sub irc_botcmd_lookup {
         return;
     }
 
-    my $response = title($request);
-    my $shorten  = shorten($request);
-    my $wot      = wot($request);
+    my ($url, $title, $shorten);
 
-    # Stop using shortened address if it's actually longer!
-    if ( length($shorten) >= length($request) ) {
-        $shorten = $request;
+    # Web address search
+    if ($request =~ /^https?:\/\//i) {
+        $url     = $request;
+        $title   = title($request);
+        $shorten = shorten($url);
+
+    # Assume string search
+    } else {
+        my $response = search($request);
+        $url     = $response->{'Url'};
+        $title   = $response->{'Title'};
+        $shorten = $url; # Don't shorten URL on plain web search
     }
+
+    my $wot     = wot($url);
 
     my @elements;
     if (defined $shorten) {
@@ -270,8 +262,8 @@ sub irc_botcmd_lookup {
         push(@elements, 'URL shortener failed');
     }
 
-    if (defined $response) {
-        push(@elements, $response);
+    if (defined $title) {
+        push(@elements, $title);
     } else {
         push(@elements, 'Title lookup failed');
     }
@@ -284,7 +276,7 @@ sub irc_botcmd_lookup {
             . ')'
         );
     } else {
-        push(@elements, 'WOT lookup failed');
+        # push(@elements, 'WOT lookup failed');
     }
 
     my $count = @elements;
@@ -305,8 +297,7 @@ sub irc_botcmd_wot {
     my ( $channel, $request ) = @_[ ARG1, ARG2 ];
 
     if ($request !~ /^https?:\/\//i) {
-        $irc->yield( privmsg => $channel => "$nick: Web addresses need to start with http(s)://" );
-        return;
+        $request = 'http://' . $request;
     }
 
     my $errors = sanitise_address($request);
@@ -371,8 +362,12 @@ sub shorten {
     eval {
         $short = makeashorterlink($query);
     };
-
     warn "URL shortener failed $@" if $@;
+
+    # Stop using shortened address if it's actually longer!
+    if ( length($short) >= length($query) ) {
+        $short = $query;
+    }
 
     return $short;
 }
