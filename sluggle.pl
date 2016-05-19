@@ -384,9 +384,12 @@ sub title {
 
     my $ua = LWP::UserAgent->new;
     $ua->timeout(20);
+    $ua->protocols_allowed( [ 'http', 'https'] );
+    $ua->max_redirect(1);
+    $ua->max_size(1024);
     $ua->env_proxy;
 
-    my $response = $ua->get($query);
+    my $response = $ua->head($query);
 
     if ($response->is_success) {
         return $response->title();
