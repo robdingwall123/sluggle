@@ -253,6 +253,11 @@ sub irc_botcmd_find {
         $shorten = $url; # Don't shorten URL on plain web search
     }
 
+    if (! defined $url) {
+        $irc->yield( privmsg => $channel => "$nick: There were no search results!");
+        return;
+    }
+
     my $wot     = wot($url);
 
     my @elements;
