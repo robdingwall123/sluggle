@@ -143,6 +143,11 @@ sub irc_public {
             my $shorten  = shorten($request);
             my $wot      = wot($request);
 
+            # Stop using shortened address if it's actually longer!
+            if ( length($shorten) >= length($request) ) {
+                $shorten = $request;
+            }
+
             my @elements;
             if (defined $shorten) {
                 push(@elements, $shorten);
@@ -152,7 +157,7 @@ sub irc_public {
                 push(@elements, $response);
             }
 
-            if (defined $wot) {
+            if ((defined $wot) and ($wot->{trustworthiness_score} =~ /^\d+$/)) {
                 push(@elements, 'Reputation is ' 
                     . $wot->{trustworthiness_description}
                     . ' ('
@@ -253,6 +258,11 @@ sub irc_botcmd_lookup {
     my $shorten  = shorten($request);
     my $wot      = wot($request);
 
+    # Stop using shortened address if it's actually longer!
+    if ( length($shorten) >= length($request) ) {
+        $shorten = $request;
+    }
+
     my @elements;
     if (defined $shorten) {
         push(@elements, $shorten);
@@ -266,7 +276,7 @@ sub irc_botcmd_lookup {
         push(@elements, 'Title lookup failed');
     }
 
-    if (defined $wot) {
+    if ((defined $wot) and ($wot->{trustworthiness_score} =~ /^\d+$/)) {
         push(@elements, 'Reputation is ' 
             . $wot->{trustworthiness_description}
             . ' ('
