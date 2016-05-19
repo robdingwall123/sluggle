@@ -360,15 +360,18 @@ sub irc_botcmd_wot {
 }
 
 sub wot {
-    my $query = shift;
+    my $request = shift;
 
-    use URI;
-    my $uri = URI->new($query);
+    use URI::URL;
+    my $url = new URI::URL $request;
+    my $host;
+    eval { $host = $url->host; };
+    warn "Host not found $@" if $@;
 
     use Net::WOT;
     my $wot = Net::WOT->new;
 
-    my %wot = $wot->get_reputation($uri->host);
+    my %wot = $wot->get_reputation($host);
 
     # the %wot hash seems oddly structured
     my $mywot = {

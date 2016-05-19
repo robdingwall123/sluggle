@@ -51,7 +51,6 @@ The !wot command requires a URL:
   * Regexp::Common
   * Regexp::IPv6
   * URI::URL
-  * URI
   * WWW::Shorten::TinyURL
 
  2. Clone or save the repository.
