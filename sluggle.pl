@@ -276,7 +276,7 @@ sub find {
     # Web address search
     if ($request =~ /^https?:\/\//i) {
         $url     = $request;
-        $title   = title($request);
+        $title   = get_data($request);
         $shorten = shorten($url);
 
     # Assume string search
@@ -411,6 +411,104 @@ sub shorten {
     }
 
     return $short;
+}
+
+sub get_data {
+    my $request = shift;
+
+    warn "DEBUG ------------------------------";
+
+    use URI::URL;
+    my $url = new URI::URL $request;
+    my $path;
+    eval { $path = $url->path; };
+    warn "Path not found $@" if $@;
+
+    warn "Successfully obtained $path";
+
+    my $response;
+    if ($path =~ m/\.(?:jpg|jpeg|png|bmp|gif|jng|miff|pcx|pgm|pnm|ppm|tif|tiff)/i) {
+        $response = image_title($request, $path);
+
+    } else {
+        $response = title($request);
+
+    }
+
+    return $response; 
+
+}
+
+sub magick_data {
+    my $file = shift;
+
+    use Graphics::Magick;
+    
+    my $img=Graphics::Magick->new;
+
+    my $status = $img->Read($file);
+    warn "$status" if "$status";
+
+    my ($width, $height, $quality, $type, $magick) = $img->Get(qw(width height quality type magick));
+
+    my $imgdata = {
+        'width'     => $width,
+        'height'    => $height,
+        'type'      => $type,
+        'magick'    => $magick,
+        'quality'   => $quality,
+    };
+
+    unlink($file) or warn "Unable to unlink $file: $!";
+
+    return $imgdata;
+}
+
+sub image_title {
+    my ($query, $path) = @_;
+
+    # Remove path
+    $path =~ s/^.+\///g;
+
+    # Untaint
+    $path =~ s/[^a-z0-9\.]/_/g;
+    $path =~ s/_+/_/g;
+
+    my $file = "/tmp/$path";
+    my $saved = download_file($query, $file);
+
+    return unless ((defined $saved) and ($file eq $saved));
+
+    my $imgdata = magick_data($file);
+
+    return "$path: $imgdata->{type} $imgdata->{magick} ($imgdata->{quality}) $imgdata->{width}x$imgdata->{height}";
+
+}
+
+sub download_file {
+    my ($url, $file) = @_;
+
+    use LWP::UserAgent;
+
+    my $ua = LWP::UserAgent->new;
+    $ua->timeout(20);
+    $ua->protocols_allowed( [ 'http', 'https'] );
+    $ua->max_size(1024 * 1024 * 8);
+    $ua->env_proxy;
+
+    my $response = $ua->get($url);
+
+    return unless $response->is_success;
+
+    # Dump file
+    open( my $fh_BINFILE, '>', $file) or
+        die "Cannot write to $file: $!";
+    binmode $fh_BINFILE;
+    print $fh_BINFILE $response->decoded_content( charset => 'none' );
+    close($fh_BINFILE) or die "Cannot close $file: $!";
+
+    return $file;
+
 }
 
 sub title {
