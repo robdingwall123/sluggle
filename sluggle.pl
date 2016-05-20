@@ -19,6 +19,7 @@
 
 use strict;
 use warnings;
+use utf8;
 
 use POE;
 use POE::Component::IRC;
@@ -425,8 +426,11 @@ sub title {
 
     my $response = $ua->get($query);
 
+    use Encode;
+    my $title = decode_utf8( $response->title() );
+
     if ($response->is_success) {
-        return $response->title();
+        return $title;
     } else {
         return $response->status_line;
     }
