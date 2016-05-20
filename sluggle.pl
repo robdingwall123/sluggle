@@ -306,12 +306,12 @@ sub find {
         push(@elements, 'Title lookup failed');
     }
 
-    if ((defined $wot) and ($wot->{trustworthiness_score} =~ /^\d+$/)) {
-        push(@elements, 'WoT is ' 
+    if ((defined $wot) and ($wot->{trustworthiness_score} =~ /^\d+$/) and ($wot->{trustworthiness_score} < 60)) {
+        push(@elements, '*** Warning WoT is ' 
             . $wot->{trustworthiness_description}
             . ' ('
             . $wot->{trustworthiness_score}
-            . ')'
+            . ') ***'
         );
     } else {
         # push(@elements, 'WoT lookup failed');
