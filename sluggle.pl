@@ -464,15 +464,11 @@ sub shorten {
 sub get_data {
     my $request = shift;
 
-    warn "DEBUG ------------------------------";
-
     use URI::URL;
     my $url = new URI::URL $request;
     my $path;
     eval { $path = $url->path; };
     warn "Path not found $@" if $@;
-
-    warn "Successfully obtained $path";
 
     my $response;
     if ($path =~ m/\.(?:jpg|jpeg|png|bmp|gif|jng|miff|pcx|pgm|pnm|ppm|tif|tiff)/i) {
