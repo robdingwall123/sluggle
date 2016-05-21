@@ -501,12 +501,13 @@ sub magick_data {
 
     use Graphics::Magick;
     
-    my $img=Graphics::Magick->new;
+    my $img = Graphics::Magick->new;
 
     my $status = $img->Read($file);
     warn "$status" if "$status";
 
     my ($width, $height, $quality, $type, $magick) = $img->Get(qw(width height quality type magick));
+    my ($lat, $lon) = exif_data($file);
 
     my $imgdata = {
         'width'     => $width,
@@ -514,11 +515,28 @@ sub magick_data {
         'type'      => $type,
         'magick'    => $magick,
         'quality'   => $quality,
+        'lat'       => $lat,
+        'long'      => $lon,
     };
 
     unlink($file) or warn "Unable to unlink $file: $!";
 
     return $imgdata;
+}
+
+sub exif_data {
+    my $file = shift;
+
+    use Image::ExifTool;
+
+    my $exif = Image::ExifTool->new();
+    my $hash = $exif->ImageInfo($file);
+
+    my $lat = $exif->GetValue('GPSLatitude', 'PrintConv');
+    my $lon = $exif->GetValue('GPSLongitude', 'PrintConv');
+    my $pos = $exif->GetValue('GPSPosition', 'PrintConv');
+
+    return($lat, $lon);
 }
 
 sub download_file {
@@ -585,9 +603,12 @@ sub get_data {
     } elsif ($type =~ m/^image\/(?:jpg|jpeg|png|bmp|gif|jng|miff|pcx|pgm|pnm|ppm|tif|tiff)/i) {
         my $saved   = download_file($response->decoded_content( charset => 'none' ));
         my $imgdata = magick_data($saved);
-
         my $file  = filename($query);
-        return "$imgdata->{type} $imgdata->{magick} ($imgdata->{quality}) $imgdata->{width}x$imgdata->{height}";
+        my $response = "$imgdata->{type} $imgdata->{magick} ($imgdata->{quality}) $imgdata->{width}x$imgdata->{height}";
+        if ((defined $imgdata->{lat}) and (defined $imgdata->{long})) {
+            $response .= " :: GPS $imgdata->{lat} $imgdata->{long}";
+        }
+        return $response;
 
     # As yet unhandled file type
     } else {
