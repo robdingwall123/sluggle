@@ -5,10 +5,20 @@ nickname    "sluggle"
 ircname     "Sluggle the Sailor Bot"
 server      "irc.freenode.net"
 channels    "#Foo", "#Bar"
+
+# Add a list of bots to be ignored here
 bots        "ircbot1", "ircbot2"
-addressed   0
-private     0
+
+# Command mode
+# Set a suitable command prefix and set addressed to 0
 prefix      '!'
+addressed   0
+
+# Allow commands from a private channel
+private     0
+
+# Automatically accept invitations to other channels
+invites     0
 
 # Bing
 url         "https://api.datamarket.azure.com/Bing/SearchWeb/v1/Web?$top=1&$format=JSON&Query="

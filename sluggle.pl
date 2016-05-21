@@ -137,6 +137,13 @@ sub irc_kick {
 
 sub irc_invite {
     my ($who, $where) = @_[ARG0 .. ARG1];
+    my $nick = ( split /!/, $who )[0];
+
+    if ($CONF->param('invites') == 0) {
+        warn "Invites not permitted - invitation by $who to join $where was ignored";
+        $irc->yield( privmsg => $nick => "My apologies but current configuration is to ignore invitations" );
+        return;
+    }
 
     # Add the channel to the list
     my @channels = $CONF->param('channels');
