@@ -340,15 +340,15 @@ sub check_for_server_ip {
 sub find {
     my $request = shift;
 
-    my $errors = sanitise_address($request);
-    if ($errors ne '0') {
-        return $errors;
-    }
-
     my ($url, $title, $shorten, $wot);
 
     # Web address search
     if ($request =~ /^https?:\/\//i) {
+        my $errors = sanitise_address($request);
+        if ($errors ne '0') {
+            return $errors;
+        }
+
         $url     = $request;
         $title   = get_data($request);
         $shorten = shorten($url);
