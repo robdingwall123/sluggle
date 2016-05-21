@@ -270,6 +270,46 @@ sub irc_botcmd_find {
 
 }
 
+sub strip_non_alphanumerics {
+    my $string = shift;
+
+    my $alphanumerics = $string;
+    $alphanumerics =~ s/\W+/-/g;
+
+    return $alphanumerics;
+}
+
+sub check_for_server_ip {
+    my $request = shift;
+
+    use Net::Address::IP::Local;
+
+    my $ipv4 = Net::Address::IP::Local->public_ipv4;
+    my $ipv6 = Net::Address::IP::Local->public_ipv6;
+
+    $request =~ s/(?:$ipv4|$ipv6)/censored/gi;
+
+    # That really should be it, but what if the delimiters
+    # are changed to dashes or anything
+    # Extra check stripping non-alphanumerics
+
+    my $request_an = strip_non_alphanumerics($request);
+    my $ipv4_an    = strip_non_alphanumerics($ipv4);
+    my $ipv6_an    = strip_non_alphanumerics($ipv6);
+
+    if ($request_an =~ s/(?:$ipv4_an|$ipv6_an)/censored/gi) {
+        # If there is still a hidden IP address
+        # you'd better return the stripped and 
+        # sanitised output
+        return $request_an;
+    } else {
+        # All good
+        return $request;
+    }
+    
+    return;
+}
+
 sub find {
     my $request = shift;
 
@@ -327,6 +367,7 @@ sub find {
     my $count = @elements;
     if ($count != 0) {
         my $message = join(' - ', @elements);
+        $message = check_for_server_ip($message);
         return $message . '.';
     } else {
         # Do nothing, hopefully no-one will notice
@@ -413,7 +454,7 @@ sub shorten {
     warn "URL shortener failed $@" if $@;
 
     # Stop using shortened address if it's actually longer!
-    if ( length($short) >= length($query) ) {
+    if ((not defined $short) or ( length($short) >= length($query) )) {
         $short = $query;
     }
 
