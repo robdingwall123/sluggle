@@ -56,7 +56,6 @@ POE::Session->create(
             irc_botcmd_find 
             irc_botcmd_wot
             irc_botcmd_op
-            irc_botcmd_calc
             irc_public
         ) ],
     ],
@@ -77,7 +76,6 @@ sub _start {
                 find        => 'A simple Internet search, takes one argument - a string to search.',
                 wot         => 'Looks up WoT Web of Trust reputation, takes one argument - an http web address.',
                 op          => 'Currently has no other purpose than to tell you if you are an op or not!',
-                calc        => 'Calculates the following formula.'
             },
             In_channels     => 1,
             In_private      => $CONF->param('private'),
@@ -247,32 +245,6 @@ sub irc_botcmd_op {
     } else {
         $irc->yield( privmsg => $channel => "$nick: Only channel operators may do that!");
     } 
-
-    return;
-
-}
-
-sub irc_botcmd_calc {
-    my $nick = ( split /!/, $_[ARG0] )[0];
-
-    my ($channel, $request) = @_[ ARG1, ARG2 ];
-
-    unless ( check_if_op($channel, $nick) ) {
-        return;
-    }
-
-    use Safe;
-    my $compartment = new Safe;
-    $compartment->permit(qw(
-        abs atan2 cos exp int log sin sqrt
-    ));
-    my $response = $compartment->reval( eval{ "use Math::Trig;" . $request } );
-
-    unless (defined $response) {
-        $response = "Only Perl maths functions are permitted";
-    }
-    
-    $irc->yield( privmsg => $channel => "$nick: " . $response);
 
     return;
 
