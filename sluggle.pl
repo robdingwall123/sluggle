@@ -177,10 +177,16 @@ sub irc_public {
 #    'Title' => 'Surrey Linux User Group'
 #  }
 
+
     # Ignore sluggle: commands - handled by botcommand plugin
     my $whoami = $CONF->param('nickname');
-    if ($what =~ /^(?:!|$whoami:)/i) {
+    if ($what =~ /^(?:!|$whoami:)\s*(?:find|wot|op)/i) {
         # Do nothing
+
+    # Default find command
+    } elsif ( (my $request) = $what =~ /^(?:!|$whoami:)\s*(.+)$/i) {
+        my $response = find($request);
+        $irc->yield( privmsg => $channel => "$nick: " . $response);
 
     # Shorten links and return title
     } elsif ( (my @requests) = $what =~ /\b(https?:\/\/[^ ]+)\b/g ) {
@@ -188,6 +194,7 @@ sub irc_public {
             my $response = find($request);
             $irc->yield( privmsg => $channel => "$nick: " . $response);
         }
+
     }
 
     return;
