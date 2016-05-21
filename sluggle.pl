@@ -220,19 +220,39 @@ sub _default {
 sub sanitise_address {
     my $request = shift;
 
+    my $count = (my @elements) = split(/\s+/, $request);
+
+    my $response = 0;
+
+    # Basic checks
+    if ($count > 1) {
+        $response = 'Spaces are not permitted';
+        return $response;
+
+    } elsif ($request !~ m|(?:([^:/?#]+):)?(?://([^/?#]*))?([^?#]*)(?:\?([^#]*))?(?:#(.*))?|) {
+        $response = 'That does not look like a URL';
+        return $response;
+
+    }
+
     use Regexp::IPv6 qw($IPv6_re);
     use Regexp::Common qw /net/;
     my $IPv4_re = $RE{net}{IPv4};
 
     use URI::URL;
     my $url = new URI::URL $request;
-    my $port;
+    my ($host, $port);
+
     eval { $port = $url->port; };
     warn "Port not found $@" if $@;
 
-    my $response = 0;
+    eval { $host = $url->host; };
+    warn "Host not found $@" if $@;
 
-    if ( (defined $port) and ($port ne '80' ) and ($port ne '443') ) {
+    if ($@) {
+        $response = "Host not found $@";
+
+    } elsif ( (defined $port) and ($port ne '80' ) and ($port ne '443') ) {
         $response = 'Non-standard HTTP ports are not permitted';
 
     } elsif ( $request =~ m/^(?:https?:\/\/)?$IPv4_re/i ) {
@@ -325,13 +345,14 @@ sub find {
         return $errors;
     }
 
-    my ($url, $title, $shorten);
+    my ($url, $title, $shorten, $wot);
 
     # Web address search
     if ($request =~ /^https?:\/\//i) {
         $url     = $request;
         $title   = get_data($request);
         $shorten = shorten($url);
+        $wot     = wot($url);
 
     # Assume string search
     } else {
@@ -345,7 +366,6 @@ sub find {
         return "There were no search results!";
     }
 
-    my $wot     = wot($url);
 
     my @elements;
     if (defined $shorten) {
@@ -399,7 +419,11 @@ sub irc_botcmd_wot {
         return;
     }
 
-    my $wot = wot($request);
+    my $wot;
+    eval { $wot = wot($request); };
+    my $error = $@;
+    warn "WoT $error" if $error;
+
     if ((defined $wot) and ($wot->{trustworthiness_score} =~ /\d/) ) {
         $irc->yield( privmsg => $channel => "$nick: Site reputation is "
            . $wot->{trustworthiness_description}
@@ -407,6 +431,10 @@ sub irc_botcmd_wot {
            . $wot->{trustworthiness_score} 
            . ').'
         );
+
+    } elsif ((defined $error) and ($error ne '')) {
+        $irc->yield( privmsg => $channel => "$nick: WoT $error.");
+
     } else {
         $irc->yield( privmsg => $channel => "$nick: WoT did not return any site reputation.");
     }
