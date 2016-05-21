@@ -461,28 +461,6 @@ sub shorten {
     return $short;
 }
 
-sub get_data {
-    my $request = shift;
-
-    use URI::URL;
-    my $url = new URI::URL $request;
-    my $path;
-    eval { $path = $url->path; };
-    warn "Path not found $@" if $@;
-
-    my $response;
-    if ($path =~ m/\.(?:jpg|jpeg|png|bmp|gif|jng|miff|pcx|pgm|pnm|ppm|tif|tiff)/i) {
-        $response = image_title($request, $path);
-
-    } else {
-        $response = title($request);
-
-    }
-
-    return $response; 
-
-}
-
 sub magick_data {
     my $file = shift;
 
@@ -508,57 +486,46 @@ sub magick_data {
     return $imgdata;
 }
 
-sub image_title {
-    my ($query, $path) = @_;
+sub download_file {
+    my $content = shift;
+
+    use File::Temp 'tempfile';
+    my ($fh, $file) = tempfile();
+
+    # Dump file
+    open( $fh, '>', $file) or
+        die "Cannot write to $file: $!";
+    binmode $fh;
+    print $fh $content;
+    close($fh) or die "Cannot close $file: $!";
+
+    return $file;
+}
+
+sub filename {
+    my $request = shift;
+
+    use URI::URL;
+    my $url = new URI::URL $request;
+    my $path;
+    eval { $path = $url->path; };
+    warn "Path not found $@" if $@;
 
     # Remove path
     $path =~ s/^.+\///g;
 
     # Untaint
-    $path =~ s/[^a-z0-9\.]/_/g;
+    $path =~ s/[^a-z0-9\.\-]/_/g;
     $path =~ s/_+/_/g;
 
-    my $file = "/tmp/$path";
-    my $saved = download_file($query, $file);
-
-    return unless ((defined $saved) and ($file eq $saved));
-
-    my $imgdata = magick_data($file);
-
-    return "$path: $imgdata->{type} $imgdata->{magick} ($imgdata->{quality}) $imgdata->{width}x$imgdata->{height}";
-
+    return $path; 
 }
 
-sub download_file {
-    my ($url, $file) = @_;
-
-    use LWP::UserAgent;
-
-    my $ua = LWP::UserAgent->new;
-    $ua->timeout(20);
-    $ua->protocols_allowed( [ 'http', 'https'] );
-    $ua->max_size(1024 * 1024 * 8);
-    $ua->env_proxy;
-
-    my $response = $ua->get($url);
-
-    return unless $response->is_success;
-
-    # Dump file
-    open( my $fh_BINFILE, '>', $file) or
-        die "Cannot write to $file: $!";
-    binmode $fh_BINFILE;
-    print $fh_BINFILE $response->decoded_content( charset => 'none' );
-    close($fh_BINFILE) or die "Cannot close $file: $!";
-
-    return $file;
-
-}
-
-sub title {
+sub get_data {
     my $query = shift;
 
     use LWP::UserAgent;
+    use Encode;
 
     my $ua = LWP::UserAgent->new;
     $ua->timeout(20);
@@ -568,14 +535,33 @@ sub title {
 
     my $response = $ua->get($query);
 
-    use Encode;
-    my $title = decode_utf8( $response->title() );
-
-    if ($response->is_success) {
-        return $title;
-    } else {
+    unless ($response->is_success) {
         return $response->status_line;
     }
+
+    my $type     = $response->header('content-type');
+
+    # Simple HTML page
+    if ($type =~ m/^text\/html/i) {
+        my $title = decode_utf8( $response->title() );
+        return $title;
+
+    # Images handled by graphicsmagick
+    } elsif ($type =~ m/^image\/(?:jpg|jpeg|png|bmp|gif|jng|miff|pcx|pgm|pnm|ppm|tif|tiff)/i) {
+        my $saved   = download_file($response->decoded_content( charset => 'none' ));
+        my $imgdata = magick_data($saved);
+
+        my $file  = filename($query);
+        return "$imgdata->{type} $imgdata->{magick} ($imgdata->{quality}) $imgdata->{width}x$imgdata->{height}";
+
+    # As yet unhandled file type
+    } else {
+        warn "\n==================== DEBUG =====================";
+        warn "Unhandled file type is $type";
+
+        return "File type $type";
+    }
+
 }
 
 sub search {
