@@ -45,6 +45,7 @@ my $irc = POE::Component::IRC::State->spawn(
    server   => $CONF->param('server'),
 ) or die "Oh noooo! $!";
 
+# Commands
 POE::Session->create(
     package_states => [
         main => [ qw(
@@ -56,6 +57,7 @@ POE::Session->create(
             irc_botcmd_find 
             irc_botcmd_wot
             irc_botcmd_op
+            irc_botcmd_wolfram
             irc_public
         ) ],
     ],
@@ -70,12 +72,14 @@ sub _start {
     # retrieve our component's object from the heap where we stashed it
     my $irc = $heap->{irc};
 
+    # Commands
     $irc->plugin_add('BotCommand',
         POE::Component::IRC::Plugin::BotCommand->new(
             Commands => {
                 find        => 'A simple Internet search, takes one argument - a string to search.',
                 wot         => 'Looks up WoT Web of Trust reputation, takes one argument - an http web address.',
                 op          => 'Currently has no other purpose than to tell you if you are an op or not!',
+                wolfram     => 'This function is currently not working',
             },
             In_channels     => 1,
             In_private      => $CONF->param('private'),
@@ -180,7 +184,7 @@ sub irc_public {
 
     # Ignore sluggle: commands - handled by botcommand plugin
     my $whoami = $CONF->param('nickname');
-    if ($what =~ /^(?:!|$whoami:)\s*(?:find|wot|op)/i) {
+    if ($what =~ /^(?:!|$whoami:)\s*(?:find|wot|op|wolfram)/i) {
         # Do nothing
 
     # Default find command
@@ -265,6 +269,27 @@ sub sanitise_address {
         $response = 'URLs starting with a file path are not permitted';
 
     }
+
+    return $response;
+}
+
+sub irc_botcmd_wolfram {
+    my $nick = ( split /!/, $_[ARG0] )[0];
+
+    my ($channel, $request) = @_[ ARG1, ARG2 ];
+
+    my $response = wolfram($request);
+
+    $irc->yield( privmsg => $channel => "$nick: $response.");
+
+    return;
+
+}
+
+sub wolfram {
+    my $request = shift;
+
+    my $response = 'The wolfram command has not yet been completed';
 
     return $response;
 }
