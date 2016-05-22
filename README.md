@@ -3,9 +3,8 @@ Simple IRC Searchbot
 
 ## Usage
 
-    !find Winter Olympics
-    !find http://google.com
-    !wot http://google.com
+    sluggle: year of linux desktop
+    sluggle: http://example.com
 
 ## Address vs Command Modes
 
@@ -40,18 +39,23 @@ The !wot command requires a URL:
 
  1. You will Perl 5 along with the following CPAN modules:
 
-  * POE
   * Config::Simple
-  * LWP::UserAgent
+  * Encode
+  * File::Temp
+  * Graphics::Magick
+  * Image::ExifTool
   * JSON
+  * LWP::UserAgent
+  * Net::Address::IP::Local
   * Net::WOT
   * POE::Component::IRC::Plugin::BotCommand
+  * POE::Component::IRC::State
   * POE::Component::IRC
   * POE
   * Regexp::Common
   * Regexp::IPv6
   * URI::URL
-  * WWW::Shorten::TinyURL
+  * WWW::Shorten
 
  2. Clone or save the repository.
 
